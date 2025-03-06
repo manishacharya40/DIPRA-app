@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:csv/csv.dart';
 import 'package:dipra_app/app/data/table10_controller.dart';
 import 'package:dipra_app/app/data/table11_controller.dart';
@@ -12,7 +14,13 @@ import 'package:dipra_app/app/data/table9_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'dart:math';
+import 'package:universal_html/html.dart' as uh;
+
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class DipraController extends GetxController {
   //Reactive variables
@@ -172,11 +180,29 @@ class DipraController extends GetxController {
       net_thickness,
       Eprimevalue,
     );
-    if (Pv_basedondeflection < trenchloadPv) {
-      print('Deflection is ok');
+    if (Pv_basedondeflection > trenchloadPv) {
+      print('Deflection check is ok');
     } else {
       print('Deflection is not ok');
     }
+
+    //Step 5: Check for bending stress, where we take kb as 48000 psi
+    double Pv_basedonbendingstress = allowablePv_bendingstress(
+      f: 48000,
+      d: outside_dia,
+      t: net_thickness,
+      kb: pressureandthickness?['kb'],
+      kx: kxvalue,
+      e: modulus,
+      ePrime: Eprimevalue,
+    );
+    if (Pv_basedonbendingstress > trenchloadPv) {
+      print('Bending stress check is ok');
+    } else {
+      print('Bending stress check is not ok');
+    }
+    //Step 5: Generate pdf
+    generatePDF();
   }
 
   //Method to calculate surface load factor as per Equation 6 of AWWA C150
@@ -237,7 +263,7 @@ class DipraController extends GetxController {
     return DtRatio;
   }
 
-  //Nethod to calculate Pv based on deflection check
+  //Nethod to calculate Pv allowable based on deflection check
   double calculatePv_deflectioncheck(
     double D,
     double Kx,
@@ -259,5 +285,92 @@ class DipraController extends GetxController {
     double Pv_def = (deltaXOverD / (12 * Kx)) * bracketTerm;
 
     return Pv_def;
+  }
+
+  //Method to check Pv based on bending stress
+  double allowablePv_bendingstress({
+    required double f,
+
+    required double d,
+
+    required double t,
+
+    required double kb,
+
+    required double kx,
+
+    required double e,
+
+    required double ePrime,
+  }) {
+    // Calculate D/t
+
+    double dtRatio = d / t;
+
+    // Calculate the term inside the square brackets
+
+    double bracketTerm =
+        kb - (kx / ((8 * e) / (ePrime * pow(dtRatio - 1, 3)) + 0.732));
+
+    // Calculate the denominator
+
+    double denominator = 3 * dtRatio * (dtRatio - 1) * bracketTerm;
+
+    // Calculate Pv
+
+    double pv = f / denominator;
+
+    return pv;
+  }
+
+  //method to generate pdf file
+  Future<void> generatePDF() async {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.nunitoExtraLight();
+
+    //Load the font
+    // final fontData = await rootBundle.load('lib/app/fonts/Roboto-Regular.ttf');
+    // final ttf = pw.Font.ttf(fontData);
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Center(
+            child: pw.Text(
+              'Hello World',
+              style: pw.TextStyle(font: font, fontSize: 40),
+            ),
+          );
+        },
+      ),
+    );
+    print("Calling savePdfCrossPlatform"); // Add this before the call
+    await savePdfCrossPlatform(pdf);
+
+    print("generatePDF function completed");
+  }
+
+  Future<void> savePdfCrossPlatform(pw.Document pdf) async {
+    try {
+      final savedFile = await pdf.save();
+
+      final blob = uh.Blob([savedFile], 'application/pdf');
+      final url = uh.Url.createObjectUrlFromBlob(blob);
+
+      final anchor =
+          uh.AnchorElement(href: url)
+            ..setAttribute(
+              "download",
+              "${DateTime.now().millisecondsSinceEpoch}.pdf",
+            )
+            ..click();
+
+      uh.Url.revokeObjectUrl(url); // Release the object URL
+
+      print('PDF download initiated'); // User feedback
+    } catch (e) {
+      print('Error saving PDF: $e');
+      // Handle the error (e.g., show an error message to the user)
+    }
   }
 }

@@ -68,35 +68,36 @@ class DipraView extends GetView<DipraController> {
 
       body: SingleChildScrollView(
         child: Row(
-          mainAxisSize: MainAxisSize.min,
-
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: MediaQuery.of(context).size.height,
-              width:
-                  MediaQuery.of(context).size.width /
-                  4, // Set container width to 1/3 of screen width
-              margin: EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.blue[50], // Light blue background color
-                borderRadius: BorderRadius.circular(12.0), // Rounded corners
-                border: Border.all(
-                  color: Colors.black, // Border color
-                  width: 2, // Border width
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1), // Light shadow color
-                    blurRadius: 8, // Shadow blur radius
-                    offset: Offset(
-                      0,
-                      4,
-                    ), // Shadow offset, giving a slight elevation effect
+            Expanded(
+              flex: 1,
+              child: Container(
+                // width:
+                //     MediaQuery.of(context).size.width /
+                //     4, // Set container width to 1/3 of screen width
+                margin: EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50], // Light blue background color
+                  borderRadius: BorderRadius.circular(12.0), // Rounded corners
+                  border: Border.all(
+                    color: Colors.black, // Border color
+                    width: 2, // Border width
                   ),
-                ],
-              ),
-              padding: EdgeInsets.all(16.0),
-              child: Expanded(
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(
+                        0.1,
+                      ), // Light shadow color
+                      blurRadius: 8, // Shadow blur radius
+                      offset: Offset(
+                        0,
+                        4,
+                      ), // Shadow offset, giving a slight elevation effect
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.all(16.0),
                 child: Container(
                   color: Colors.blue[50],
                   child: Center(
@@ -109,7 +110,6 @@ class DipraView extends GetView<DipraController> {
                             // Dropdown for Pipe Size
                             Obx(
                               () => Column(
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     'Input Values: ',
@@ -193,7 +193,7 @@ class DipraView extends GetView<DipraController> {
                             Obx(
                               () => Align(
                                 alignment: Alignment.centerLeft,
-                                child: Container(
+                                child: SizedBox(
                                   width: MediaQuery.of(context).size.width / 4,
                                   child: DropdownButtonFormField<String>(
                                     value: controller.trenchType.value,
@@ -326,7 +326,7 @@ class DipraView extends GetView<DipraController> {
 
             // Calculate Button
             Container(
-              width: MediaQuery.of(context).size.width / 3.5,
+              // width: MediaQuery.of(context).size.width / 3.5,
               height: MediaQuery.of(context).size.height,
               margin: EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -342,155 +342,151 @@ class DipraView extends GetView<DipraController> {
                   ),
                 ],
               ),
-              child: Expanded(
-                child: Container(
-                  color: Colors.blue[50],
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ElevatedButton(
-                              onPressed: () => _calculate(),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    Colors.blue[700], // Button background color
-                                foregroundColor: Colors.white, // Text color
-                                elevation: 1, // Shadow effect
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    12.0,
-                                  ), // Rounded corners
-                                ),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 32.0,
-                                  vertical: 16.0,
-                                ), // Larger padding for a bigger button
+              child: Container(
+                color: Colors.blue[50],
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => _calculate(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Colors.blue[700], // Button background color
+                              foregroundColor: Colors.white, // Text color
+                              elevation: 1, // Shadow effect
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  12.0,
+                                ), // Rounded corners
                               ),
-                              child: Text(
-                                'Calculate',
-                                style: TextStyle(
-                                  fontSize: 18, // Bigger text
-                                  fontWeight: FontWeight.bold, // Bold text
-                                  letterSpacing:
-                                      1.2, // Slight spacing between letters for a more elegant look
-                                ),
-                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 32.0,
+                                vertical: 16.0,
+                              ), // Larger padding for a bigger button
                             ),
-
-                            SizedBox(width: 20),
-                            ElevatedButton(
-                              onPressed: () {},
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    Colors.blue[700], // Button background color
-                                foregroundColor: Colors.white, // Text color
-                                elevation: 8, // Shadow effect
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    12.0,
-                                  ), // Rounded corners
-                                ),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 32.0,
-                                  vertical: 16.0,
-                                ), // Larger padding for a bigger button
-                              ),
-                              child: Text(
-                                'Export to pdf',
-                                style: TextStyle(
-                                  fontSize: 18, // Bigger text
-                                  fontWeight: FontWeight.bold, // Bold text
-                                  letterSpacing:
-                                      1.2, // Slight spacing between letters for a more elegant look
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Display results
-                        // Display the calculated thickness
-                        Obx(
-                          () => Card(
-                            elevation: 4, // Add a subtle shadow
-                            margin: EdgeInsets.symmetric(
-                              vertical: 16.0,
-                            ), // Margin for separation
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                12.0,
-                              ), // Rounded corners for the card
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(
-                                16.0,
-                              ), // Padding inside the card
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment
-                                        .start, // Align the text to the left
-                                children: [
-                                  Text(
-                                    'Result:',
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue[700], // Heading color
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    height: 10,
-                                  ), // Space between the heading and results
-                                  Text(
-                                    'Diameter of pipe: ${controller.thickness.value.toStringAsFixed(3)} inches',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color:
-                                          Colors.blue[800], // Result text color
-                                    ),
-                                  ),
-                                  SizedBox(height: 8), // Space between results
-                                  Text(
-                                    'Calculated Thickness: ${controller.thickness.value.toStringAsFixed(3)} inches',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue[800],
-                                    ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Pressure Class: ${controller.thickness.value.toStringAsFixed(3)} psi',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue[800],
-                                    ),
-                                  ),
-                                ],
+                            child: Text(
+                              'Calculate',
+                              style: TextStyle(
+                                fontSize: 18, // Bigger text
+                                fontWeight: FontWeight.bold, // Bold text
+                                letterSpacing:
+                                    1.2, // Slight spacing between letters for a more elegant look
                               ),
                             ),
                           ),
+
+                          SizedBox(width: 20),
+                          ElevatedButton(
+                            onPressed: () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Colors.blue[700], // Button background color
+                              foregroundColor: Colors.white, // Text color
+                              elevation: 8, // Shadow effect
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  12.0,
+                                ), // Rounded corners
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 32.0,
+                                vertical: 16.0,
+                              ), // Larger padding for a bigger button
+                            ),
+                            child: Text(
+                              'Export to pdf',
+                              style: TextStyle(
+                                fontSize: 18, // Bigger text
+                                fontWeight: FontWeight.bold, // Bold text
+                                letterSpacing:
+                                    1.2, // Slight spacing between letters for a more elegant look
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Display results
+                      // Display the calculated thickness
+                      Obx(
+                        () => Card(
+                          elevation: 4, // Add a subtle shadow
+                          margin: EdgeInsets.symmetric(
+                            vertical: 16.0,
+                          ), // Margin for separation
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              12.0,
+                            ), // Rounded corners for the card
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(
+                              16.0,
+                            ), // Padding inside the card
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment
+                                      .start, // Align the text to the left
+                              children: [
+                                Text(
+                                  'Result:',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue[700], // Heading color
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: 10,
+                                ), // Space between the heading and results
+                                Text(
+                                  'Diameter of pipe: ${controller.thickness.value.toStringAsFixed(3)} inches',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Colors.blue[800], // Result text color
+                                  ),
+                                ),
+                                SizedBox(height: 8), // Space between results
+                                Text(
+                                  'Calculated Thickness: ${controller.thickness.value.toStringAsFixed(3)} inches',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue[800],
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Pressure Class: ${controller.thickness.value.toStringAsFixed(3)} psi',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        Image.asset(
-                          'lib/app/data/images/type1.png',
-                          width: 700,
-                          height: 270,
-                        ),
-                        SizedBox(height: 16),
-                        Image.asset(
-                          'lib/app/data/images/text_type.png',
-                          width: 700,
-                          height: 300,
-                        ),
-                      ],
-                    ),
+                      ),
+                      Image.asset(
+                        'lib/app/data/images/types.png',
+                        width: 500,
+                        height: 270,
+                      ),
+                      SizedBox(height: 16),
+                      Image.asset(
+                        'lib/app/data/images/text_type.png',
+                        width: 500,
+                        height: 300,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -514,16 +510,11 @@ class DipraView extends GetView<DipraController> {
                   ),
                 ],
               ),
-              child: Expanded(
-                child: Container(
-                  color: Colors.blue[50],
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [Text('data')],
-                    ),
-                  ),
+              child: Container(
+                color: Colors.blue[50],
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(children: [Text('data')]),
                 ),
               ),
             ),

@@ -15,7 +15,11 @@ class Table2Controller extends GetxController {
     if (layingConditions.containsKey(type)) {
       // Return the E' and kx values for the given type
       var condition = layingConditions[type];
-      return {"E'": condition?["E'"], "kx": condition?["kx"]};
+      return {
+        "E'": condition?["E'"],
+        "kx": condition?["kx"],
+        "kb": condition?["kb"],
+      };
     } else {
       // Return null if the type is not found
       return null;
