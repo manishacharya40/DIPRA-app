@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:dipra_app/app/consts/constants.dart';
 import 'package:dipra_app/app/utils/validator.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import '../controllers/dipra_controller.dart';
 
@@ -389,23 +393,9 @@ class DipraView extends GetView<DipraController> {
                                     controller.modulusController.text,
                                   ),
                                 );
-                                await controller.generatePdfBytes();
+                                // await controller.generatePDFBytes();
                               }
                             },
-                            child: Text(
-                              'Calculate',
-                              style: TextStyle(
-                                fontSize: 18, // Bigger text
-                                fontWeight: FontWeight.bold, // Bold text
-                                letterSpacing:
-                                    1.2, // Slight spacing between letters for a more elegant look
-                              ),
-                            ),
-                          ),
-
-                          SizedBox(width: 20),
-                          ElevatedButton(
-                            onPressed: () {},
                             style: ElevatedButton.styleFrom(
                               backgroundColor:
                                   Colors.blue[700], // Button background color
@@ -422,7 +412,7 @@ class DipraView extends GetView<DipraController> {
                               ), // Larger padding for a bigger button
                             ),
                             child: Text(
-                              'Export to pdf',
+                              'Calculate',
                               style: TextStyle(
                                 fontSize: 18, // Bigger text
                                 fontWeight: FontWeight.bold, // Bold text
@@ -431,26 +421,161 @@ class DipraView extends GetView<DipraController> {
                               ),
                             ),
                           ),
+
+                          SizedBox(width: 20),
+                          ElevatedButton(
+                            onPressed: () {
+                              controller.clearUserInput();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Colors.blue[700], // Button background color
+                              foregroundColor: Colors.white, // Text color
+                              elevation: 8, // Shadow effect
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  12.0,
+                                ), // Rounded corners
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 32.0,
+                                vertical: 16.0,
+                              ), // Larger padding for a bigger button
+                            ),
+                            child: Text(
+                              'Clear',
+                              style: TextStyle(
+                                fontSize: 18, // Bigger text
+                                fontWeight: FontWeight.bold, // Bold text
+                                letterSpacing:
+                                    1.2, // Slight spacing between letters for a more elegant look
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 20),
+                          ElevatedButton(
+                            onPressed: () {
+                              controller.saveUserInput();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Colors.blue[700], // Button background color
+                              foregroundColor: Colors.white, // Text color
+                              elevation: 8, // Shadow effect
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  12.0,
+                                ), // Rounded corners
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 32.0,
+                                vertical: 16.0,
+                              ), // Larger padding for a bigger button
+                            ),
+                            child: Text(
+                              'Save',
+                              style: TextStyle(
+                                fontSize: 18, // Bigger text
+                                fontWeight: FontWeight.bold, // Bold text
+                                letterSpacing:
+                                    1.2, // Slight spacing between letters for a more elegant look
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 60),
                         ],
                       ),
 
                       // Display results
                       // Display the calculated thickness
                       Obx(
-                        () => Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
+                        () => Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24.0,
+                            vertical: 20.0,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12.0),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.2),
+                                blurRadius: 6,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Container(
+                            width: 450, // Increase width to full screen
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 24.0,
+                              vertical: 20.0,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                color: Colors.black,
+                                width: 2,
+                              ), // Black border
+                              borderRadius: BorderRadius.circular(
+                                12.0,
+                              ), // Rounded corners
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.3),
+                                  blurRadius: 6,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                Center(
+                                  child: Text(
+                                    'Calculation Results',
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue[800],
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 16),
+                                Divider(
+                                  thickness: 1,
+                                  color: Colors.black,
+                                ), // Black divider line
+                                SizedBox(height: 16),
+
                                 Text(
                                   'Pipe Size: ${controller.pipeSize.value} inches',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blueGrey[700],
+                                  ),
                                 ),
+                                SizedBox(height: 8),
+
                                 Text(
                                   'Thickness: ${controller.thickness.value} inches',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blueGrey[700],
+                                  ),
                                 ),
+                                SizedBox(height: 8),
+
                                 Text(
                                   'Pressure Class: ${controller.pressureClass.value}',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blueGrey[700],
+                                  ),
                                 ),
                               ],
                             ),
@@ -480,7 +605,7 @@ class DipraView extends GetView<DipraController> {
               height: MediaQuery.of(context).size.height,
               margin: EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.blue[700],
+                color: Colors.lightBlue[100],
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.black, width: 2),
                 boxShadow: [
@@ -493,7 +618,23 @@ class DipraView extends GetView<DipraController> {
                 ],
               ),
               child: Obx(() {
-                if (controller.pdfBytes.value != null) {
+                if (controller.isLoading.value) {
+                  return Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text(
+                            'Generating PDF...',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                } else if (controller.pdfBytes.value != null) {
                   return Expanded(
                     child: Container(
                       color: Colors.blue[50],
@@ -501,12 +642,27 @@ class DipraView extends GetView<DipraController> {
                         padding: EdgeInsets.all(16),
                         child: PdfPreview(
                           build: (format) => controller.pdfBytes.value!,
+                          allowPrinting: true,
+                          allowSharing: true,
+
+                          initialPageFormat: PdfPageFormat.a4,
                         ),
                       ),
                     ),
                   );
                 } else {
-                  return Text('data');
+                  return Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.picture_as_pdf, size: 200),
+                        Text(
+                          'No PDF generated yet. Please calculate.',
+                          style: TextStyle(fontSize: 18, color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  );
                 }
               }),
             ),

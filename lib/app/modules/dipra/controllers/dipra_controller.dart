@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:csv/csv.dart';
 import 'package:dipra_app/app/data/table10_controller.dart';
 import 'package:dipra_app/app/data/table11_controller.dart';
 import 'package:dipra_app/app/data/table2_controller.dart';
@@ -17,9 +14,7 @@ import 'package:get/get.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'dart:math';
-import 'package:universal_html/html.dart' as uh;
 
-import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 class DipraController extends GetxController {
@@ -27,6 +22,7 @@ class DipraController extends GetxController {
   final RxInt pipeSize = 3.obs;
   final RxString trenchType = 'Type 1'.obs;
   RxBool isDropdownOpen = false.obs;
+  final isLoading = false.obs;
 
   //Instantiate Table4Controller
   final table2Conroller = Get.put(Table2Controller());
@@ -54,14 +50,36 @@ class DipraController extends GetxController {
   );
   final modulusController = TextEditingController(text: 24000000.toString());
 
+  //rxdouble para
+
   //Reactive variables for thickness
   var thickness = 0.0.obs;
   var earthLoad = 0.0.obs;
   var pressureClass = ''.obs;
   var RxpipeSize = 0.obs;
 
+  void clearUserInput() {
+    pdfBytes.value = null;
+    isLoading.value = false;
+    workingpressureController.clear();
+    surgeallowanceController.clear();
+    depthofcoverController.clear();
+    densityController.text = 120.0.toString();
+    impactfactorController.text = 1.5.toString();
+    bvalueController.text = 1.5.toString();
+    wheelloadController.text = 16000.0.toString();
+    pipelengthController.text = 36.0.toString();
+    yieldstrengthController.text = 42000.0.toString();
+    modulusController.text = 24000000.0.toString();
+  }
+
+  void saveUserInput() {
+    // Save user input to local storage
+    // You can use shared_preferences or any other storage method
+  }
+
   // Method to calculate thickness
-  void calculateThickness(
+  Future<void> calculateThickness(
     int pipeSize,
     double workingPressure,
     double surgeAllowance,
@@ -75,8 +93,9 @@ class DipraController extends GetxController {
     double yieldStrength,
     double modulus,
   ) async {
+    isLoading.value = true;
     //get outside diameter of pipe
-    double? outside_dia = table5Controller.getOutsideDia(pipeSize);
+    double? outside_dia = table5Controller.getOutsideDia(pipeSize) ?? 0;
 
     //Calculation of earth load
     earthLoad.value = (depthOfCover * density / 144);
@@ -99,8 +118,6 @@ class DipraController extends GetxController {
     //get surface load factor as per Equation 6 of AWWA C150
     double surfaceLoadFactor = calculateC(outsideRadius, bValue, depthOfCover);
 
-    //get truck load
-    /////
     print('.................');
     print(
       "R value is $getRValue. Impact factor is $impactFactor. Surface load factor is $surfaceLoadFactor. Wheel load is $wheelLoad. Pipe Length is $pipeLength. Outside dia $outside_dia",
@@ -159,6 +176,7 @@ class DipraController extends GetxController {
     print('Net thickness is $net_thickness');
 
     //For pressure class, look at Table 5 and see pressure class with corresponding size and thickness
+
     var result = table5Controller.getPressureAndThickness(
       pipeSize,
       net_thickness,
@@ -210,36 +228,55 @@ class DipraController extends GetxController {
       print('Bending stress check is not ok');
     }
 
-    //Step 5: Generate pdf
-    // generatePDF();
+    await generatePDFBytes(
+      pipeSize,
+      depthOfCover,
+      workingPressure,
+      surgeAllowance,
+      trenchType,
+      yieldStrength,
+      density,
+      getRValue,
+      impactFactor,
+      outside_dia,
+      surfaceLoadFactor,
+      wheelLoad,
+      pipeLength,
+      truckloadPt,
+      trenchloadPv,
+      Dt_bending,
+      t_bending,
+      Dt_deflection,
+      t_deflection,
+      net_thickness,
+      t_bending_deflection,
+      internal_pressure,
+      thickness_internalpressure,
+      casting_allowance_Value,
+      service_allowance_Value,
+      kxvalue,
+      Eprimevalue,
+      Pv_basedondeflection,
+      Pv_basedonbendingstress,
+      bValue,
+    );
+    isLoading.value = false;
   }
 
   //Method to calculate surface load factor as per Equation 6 of AWWA C150
   double calculateC(double A, double B, double H) {
-    // Calculate the term inside the asin function
     double asinTerm =
         H *
         sqrt(
           (pow(A, 2) + pow(B, 2) + pow(H, 2)) /
               ((pow(A, 2) + pow(H, 2)) * (pow(B, 2) + pow(H, 2))),
         );
-
-    // Calculate the second term (arcsin term)
     double secondTerm = (2 / pi) * asin(asinTerm);
-
-    // Calculate the first fraction in the third term
     double fraction1 = (A * H * B) / sqrt(pow(A, 2) + pow(B, 2) + pow(H, 2));
-
-    // Calculate the second set of fractions in the third term
     double fraction2 =
         (1 / (pow(A, 2) + pow(H, 2))) + (1 / (pow(B, 2) + pow(H, 2)));
-
-    // Calculate the third term
     double thirdTerm = (2 / pi) * fraction1 * fraction2;
-
-    // Calculate C
     double C = 1 - secondTerm + thirdTerm;
-
     return C;
   }
 
@@ -280,17 +317,10 @@ class DipraController extends GetxController {
     double t1,
     double EPrime,
   ) {
-    // Calculate the (D/t1 - 1)^3 term
     double DOverT1Minus1Cubed =
         pow((D / t1) - 1, 3).toDouble(); // Convert to double
-
-    // Calculate the term inside the square brackets
     double bracketTerm = (8 * E / DOverT1Minus1Cubed) + (0.732 * EPrime);
-
-    // Calculate the (deltaX / D) term. it is 0.03 for ductile iron pipe.
     double deltaXOverD = 0.03;
-
-    // Calculate Pv
     double Pv_def = (deltaXOverD / (12 * Kx)) * bracketTerm;
 
     return Pv_def;
@@ -314,96 +344,538 @@ class DipraController extends GetxController {
     return pv;
   }
 
-  //method to generate pdf file
-  // Future<void> generatePDF() async {
-  //   final pdf = pw.Document();
-  //   final font = await PdfGoogleFonts.nunitoExtraLight();
-
-  //Load the font
-  // final fontData = await rootBundle.load('lib/app/fonts/Roboto-Regular.ttf');
-  // final ttf = pw.Font.ttf(fontData);
-  //   pdf.addPage(
-  //     pw.Page(
-  //       pageFormat: PdfPageFormat.a4,
-  //       build: (pw.Context context) {
-  //         return pw.Center(
-  //           child: pw.Text(
-  //             'Hello World',
-  //             style: pw.TextStyle(font: font, fontSize: 40),
-  //           ),
-  //         );
-  //       },
-  //     ),
-  //   );
-  //   print("Calling savePdfCrossPlatform"); // Add this before the call
-  //   await savePdfCrossPlatform(pdf);
-
-  //   print("generatePDF function completed");
-  // }
-
-  // Future<void> savePdfCrossPlatform(pw.Document pdf) async {
-  //   try {
-  //     final savedFile = await pdf.save();
-
-  //     final blob = uh.Blob([savedFile], 'application/pdf');
-  //     final url = uh.Url.createObjectUrlFromBlob(blob);
-
-  //     final anchor =
-  //         uh.AnchorElement(href: url)
-  //           ..setAttribute(
-  //             "download",
-  //             "${DateTime.now().millisecondsSinceEpoch}.pdf",
-  //           )
-  //           ..click();
-
-  //     uh.Url.revokeObjectUrl(url); // Release the object URL
-
-  //     print('PDF download initiated'); // User feedback
-  //   } catch (e) {
-  //     print('Error saving PDF: $e');
-  //     // Handle the error (e.g., show an error message to the user)
-  //   }
-  // }
-
-  //lets see if this works
   Rx<Uint8List?> pdfBytes = Rx<Uint8List?>(null);
   // Method to generate PDF bytes and store them in pdfBytes
-  Future<void> generatePdfBytes() async {
+  Future<Uint8List> generatePDFBytes(
+    pipeSize,
+    depthOfCover,
+    workingPressure,
+    surgeAllowance,
+    trenchType,
+    yieldStrength,
+    density,
+    getRValue,
+    impactFactor,
+    outside_dia,
+    surfaceLoadFactor,
+    wheelLoad,
+    pipeLength,
+    truckload,
+    trenchloadPv,
+    Dt_bending,
+    t_bending,
+    Dt_deflection,
+    t_deflection,
+    net_thickness,
+    t_bending_deflection,
+    internal_pressure,
+    thickness_internalpressure,
+    casting_allowance_Value,
+    service_allowance_Value,
+    kxvalue,
+    Eprimevalue,
+    Pv_basedondeflection,
+    Pv_basedonbendingstress,
+    bValue,
+  ) async {
     final pdf = pw.Document();
-    final font = await PdfGoogleFonts.nunitoExtraLight();
+    final font = await PdfGoogleFonts.timmanaRegular();
+    final eqn6 = await rootBundle.load('lib/app/data/images/equation6.png');
+    final imageBytes = eqn6.buffer.asUint8List();
+    pw.Image eqn6_1 = pw.Image(pw.MemoryImage(imageBytes));
+    final pageFormat = PdfPageFormat.a4.copyWith(
+      marginLeft: 20,
+      marginRight: 20,
+      marginTop: 20,
+      marginBottom: 20,
+    );
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Center(
-            child: pw.Text(
-              'Hello World',
-              style: pw.TextStyle(font: font, fontSize: 40),
-            ),
-          );
-        },
+    List<pw.Widget> pageContent = [];
+
+    pageContent.add(
+      pw.Text(
+        '''Objective: The purpose of this document is intended to determine the capacity of buried ductile-iron pipe. 
+        
+Notes: User input are highlighted style.
+    ":=" Defines a variable
+    "=" Recalls a variable
+           
+References: 1906 ANSI/AWWA C150/A21.50-96 - Thickness of Ductile-Iron Pipe
+            2006 Design of Ductile-Iron Pipe (DIPRA 2006)''',
+        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 10));
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(pw.Container(height: 2, color: PdfColors.black));
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'Design Input:',
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.Text(
+            'Description/Code Ref:',
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('D = $pipeSize in'),
+          pw.Text('Outside diameter of pipe (Table 5: AWWA C150)'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [pw.Text('H = $depthOfCover ft'), pw.Text('Depth of cover')],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('Pw = $workingPressure psi'),
+          pw.Text('Working Pressure'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('Ps = $surgeAllowance psi'),
+          pw.Text('Surge Allowance'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('Laying Condition = $trenchType'),
+          pw.Text('Laying Condition Type (AWWA C150)'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('S = $yieldStrength psi'),
+          pw.Text('Minimum yield strength in tension'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(pw.Container(height: 2, color: PdfColors.black));
+    pageContent.add(pw.SizedBox(height: 10));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'Calculation:',
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.Text(
+            'Description/Code Refs:',
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 10));
+    pageContent.add(
+      pw.Text(
+        'Step 1:',
+        style: pw.TextStyle(
+          fontSize: 12, // Set appropriate font size
+          fontWeight: pw.FontWeight.bold, // Make it bold
+          // A professional dark shade
+        ),
       ),
     );
 
-    pdfBytes.value = await pdf.save(); // Store generated bytes
-  }
+    pageContent.add(pw.SizedBox(height: 5));
 
-  // Method to download the PDF
-  Future<void> downloadPdf() async {
-    if (pdfBytes.value != null) {
-      final blob = uh.Blob([pdfBytes.value], 'application/pdf');
-      final url = uh.Url.createObjectUrlFromBlob(blob);
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('w = $density pcf'),
+          pw.Text('Soil Weight (Section 4.4: AWWA C150)'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('Pe = w * H = ${earthLoad.toStringAsFixed(3)} psi'),
+          pw.Text('Earth Load (Equation 4: AWWA C150)'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('R = ${getRValue}'),
+          pw.Text('Reduction Factor (Table 4)'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('F = $impactFactor'),
+          pw.Text('Impact Factor (Section 4.4)'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('Dn = $outside_dia in'),
+          pw.Text('Effective Pipe Diameter (Table 5)'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('A = Dn/2 = ${outside_dia / 2} in.'),
+          pw.Text('Effective Pipe Radius'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [pw.Text('B = $bValue ft'), pw.Text('B Value (Table 4.4)')],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Container(
+            alignment: pw.Alignment.center,
+            height: 70,
+            child: eqn6_1,
+          ),
+        ],
+      ),
+    );
 
-      final anchor =
-          uh.AnchorElement(href: url)
-            ..setAttribute(
-              "download",
-              "${DateTime.now().millisecondsSinceEpoch}.pdf",
-            )
-            ..click();
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('C = ${surfaceLoadFactor.toStringAsFixed(3)}'),
+          pw.Text('Surface load factor (Equation 6: AWWA C150)'),
+        ],
+      ),
+    );
 
-      uh.Url.revokeObjectUrl(url);
-    }
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('P = $wheelLoad lbf'),
+          pw.Text('Wheel Load (Section 4.4)'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('b = $pipeLength in.'),
+          pw.Text('Effective Pipe Length (Section 4.4)'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'Pt = (R * F * C * P) / (b * D) = ${truckload.toStringAsFixed(3)} psi',
+          ),
+          pw.Text('Truck Load'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('Pv = Pe + Pt = ${trenchloadPv.toStringAsFixed(3)} psi'),
+          pw.Text('Trench Load'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [pw.Text('D/t1 = ${Dt_bending} ')],
+      ),
+    );
+    pageContent.add(
+      pw.Wrap(
+        children: [
+          pw.Text(
+            'Calculation of depth-thickness ratio based on bending stress from Table 7 to 11 based on laying condition type',
+          ),
+        ],
+      ),
+    );
+
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('t1 = Dn/(Dn/t1) = ${t_bending.toStringAsFixed(3)} in.'),
+          pw.Text('Net thickness (t) for bending stress'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [pw.Text('D/t2 = $Dt_deflection')],
+      ),
+    );
+    pageContent.add(
+      pw.Wrap(
+        children: [
+          pw.Text(
+            'Calculation of depth-thickness ratio based on deflection from Table 7 to 11 based on laying condition type',
+          ),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            't2 = (Dn/(Dn/t2)) -service allowance = ${t_deflection.toStringAsFixed(3)} in.',
+          ),
+          pw.Text('Net thickness (t) for deflection design'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            't = max (t1, t2) = ${t_bending_deflection.toStringAsFixed(3)} in.',
+          ),
+        ],
+      ),
+    );
+
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Text(
+        'Net thickness is the maximum of bending stress and deflection design',
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 10));
+
+    pageContent.add(pw.Container(height: 2, color: PdfColors.black));
+
+    pageContent.add(pw.SizedBox(height: 10));
+
+    pageContent.add(
+      pw.Text(
+        'Step 2:',
+        style: pw.TextStyle(
+          fontSize: 12, // Set appropriate font size
+          fontWeight: pw.FontWeight.bold, // Make it bold
+          // A professional dark shade
+        ),
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 10));
+    pageContent.add(
+      pw.Text(
+        'Design for internal pressure : ',
+        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'Pi = 2 * (Pw + Ps) = ${internal_pressure.toStringAsFixed(3)} psi',
+          ),
+          pw.Text('Internal Pressure'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            't_internal_pressure = (Pi * D) / (2 * S) = ${thickness_internalpressure.toStringAsFixed(3)} in.',
+          ),
+          pw.Text('Net thickness for internal pressure'),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+
+    pageContent.add(pw.Container(height: 2, color: PdfColors.black));
+
+    pageContent.add(pw.SizedBox(height: 10));
+    pageContent.add(
+      pw.Text(
+        'Step 3:',
+        style: pw.TextStyle(
+          fontSize: 12, // Set appropriate font size
+          fontWeight: pw.FontWeight.bold, // Make it bold
+          // A professional dark shade
+        ),
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Text(
+        'Provided thickness is the maximum of (bending stress thickness, internal pressure, deflection design) with addition of allowances:',
+        style: pw.TextStyle(
+          fontSize: 12, // Set appropriate font size
+          fontWeight: pw.FontWeight.bold, // Make it bold
+          // A professional dark shade
+        ),
+      ),
+    );
+
+    pageContent.add(pw.SizedBox(height: 5));
+    pageContent.add(
+      pw.Wrap(
+        children: [
+          pw.Text(
+            'Provided thickness, t = ${net_thickness.toStringAsFixed(3)} in.',
+          ),
+          pw.Text(
+            ' where, service allowance is $service_allowance_Value in. and casting allowance is $casting_allowance_Value in.',
+          ),
+        ],
+      ),
+    );
+    pageContent.add(pw.SizedBox(height: 20));
+
+    pageContent.add(
+      pw.Container(
+        padding: pw.EdgeInsets.all(5),
+        width: 550,
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(
+            color: PdfColors.black,
+            width: 2,
+          ), // Black border
+          borderRadius: pw.BorderRadius.circular(12.0), // Rounded corners
+          boxShadow: [pw.BoxShadow(color: PdfColors.grey, blurRadius: 6)],
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+
+          children: [
+            pw.Text(
+              'Conclusion',
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.blue,
+              ),
+            ),
+
+            pw.SizedBox(height: 2),
+            pw.Divider(
+              thickness: 1,
+              color: PdfColors.black,
+            ), // Black divider line
+            pw.SizedBox(height: 2),
+            pw.Text(
+              'Provide ${RxpipeSize.value} inch pipe with ${thickness.value} inch thick pipe and pressure class = ${pressureClass.value} psi.',
+              style: pw.TextStyle(
+                fontSize: 12, // Set appropriate font size
+                fontWeight: pw.FontWeight.bold, // Make it bold
+                // A professional dark shade
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    //
+    // final pageFormat = PdfPageFormat.a4.copyWith(
+
+    //   marginLeft: 20,
+    //   marginRight: 20,
+    //   marginTop: 20,
+    //   marginBottom: 20,
+    //
+
+    pdf.addPage(
+      pw.MultiPage(
+        margin: const pw.EdgeInsets.all(30),
+        pageFormat: PdfPageFormat.a4,
+
+        build: (pw.Context context) {
+          List<pw.Widget> widgets = [];
+          widgets.addAll(pageContent);
+
+          return widgets;
+        },
+      ),
+    );
+    // return pdf.save();
+    pdfBytes.value = await pdf.save();
+
+    return pdf.save();
   }
 }

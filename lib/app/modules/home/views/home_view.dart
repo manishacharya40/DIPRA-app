@@ -14,9 +14,9 @@ class HomeView extends GetView<HomeController> {
       appBar: AppBar(title: const Text('HomeView'), centerTitle: true),
       body: MaterialButton(
         onPressed: () {
-          Get.toNamed('/dipra');
+          Get.toNamed('/login');
         },
-        child: Text("DIPRA"),
+        child: Text("MOVE TO LOGIN PAGE"),
       ),
     );
   }
