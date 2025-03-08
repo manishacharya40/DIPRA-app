@@ -2,6 +2,7 @@ import 'package:dipra_app/app/consts/constants.dart';
 import 'package:dipra_app/app/utils/validator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:printing/printing.dart';
 import '../controllers/dipra_controller.dart';
 
 class DipraView extends GetView<DipraController> {
@@ -352,22 +353,45 @@ class DipraView extends GetView<DipraController> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           ElevatedButton(
-                            onPressed: () => _calculate(),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Colors.blue[700], // Button background color
-                              foregroundColor: Colors.white, // Text color
-                              elevation: 1, // Shadow effect
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  12.0,
-                                ), // Rounded corners
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 32.0,
-                                vertical: 16.0,
-                              ), // Larger padding for a bigger button
-                            ),
+                            onPressed: () async {
+                              if (loginFormKey.currentState!.validate()) {
+                                controller.calculateThickness(
+                                  controller.pipeSize.value,
+                                  double.parse(
+                                    controller.workingpressureController.text,
+                                  ),
+                                  double.parse(
+                                    controller.surgeallowanceController.text,
+                                  ),
+                                  double.parse(
+                                    controller.depthofcoverController.text,
+                                  ),
+                                  double.parse(
+                                    controller.densityController.text,
+                                  ),
+                                  controller.trenchType.value,
+                                  double.parse(
+                                    controller.impactfactorController.text,
+                                  ),
+                                  double.parse(
+                                    controller.bvalueController.text,
+                                  ),
+                                  double.parse(
+                                    controller.wheelloadController.text,
+                                  ),
+                                  double.parse(
+                                    controller.pipelengthController.text,
+                                  ),
+                                  double.parse(
+                                    controller.yieldstrengthController.text,
+                                  ),
+                                  double.parse(
+                                    controller.modulusController.text,
+                                  ),
+                                );
+                                await controller.generatePdfBytes();
+                              }
+                            },
                             child: Text(
                               'Calculate',
                               style: TextStyle(
@@ -414,61 +438,19 @@ class DipraView extends GetView<DipraController> {
                       // Display the calculated thickness
                       Obx(
                         () => Card(
-                          elevation: 4, // Add a subtle shadow
-                          margin: EdgeInsets.symmetric(
-                            vertical: 16.0,
-                          ), // Margin for separation
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              12.0,
-                            ), // Rounded corners for the card
-                          ),
                           child: Padding(
-                            padding: const EdgeInsets.all(
-                              16.0,
-                            ), // Padding inside the card
+                            padding: const EdgeInsets.all(16.0),
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start, // Align the text to the left
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Result:',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue[700], // Heading color
-                                  ),
+                                  'Pipe Size: ${controller.pipeSize.value} inches',
                                 ),
-                                SizedBox(
-                                  height: 10,
-                                ), // Space between the heading and results
                                 Text(
-                                  'Diameter of pipe: ${controller.thickness.value.toStringAsFixed(3)} inches',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color:
-                                        Colors.blue[800], // Result text color
-                                  ),
+                                  'Thickness: ${controller.thickness.value} inches',
                                 ),
-                                SizedBox(height: 8), // Space between results
                                 Text(
-                                  'Calculated Thickness: ${controller.thickness.value.toStringAsFixed(3)} inches',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue[800],
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Pressure Class: ${controller.thickness.value.toStringAsFixed(3)} psi',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue[800],
-                                  ),
+                                  'Pressure Class: ${controller.pressureClass.value}',
                                 ),
                               ],
                             ),
@@ -510,13 +492,23 @@ class DipraView extends GetView<DipraController> {
                   ),
                 ],
               ),
-              child: Container(
-                color: Colors.blue[50],
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(children: [Text('data')]),
-                ),
-              ),
+              child: Obx(() {
+                if (controller.pdfBytes.value != null) {
+                  return Expanded(
+                    child: Container(
+                      color: Colors.blue[50],
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: PdfPreview(
+                          build: (format) => controller.pdfBytes.value!,
+                        ),
+                      ),
+                    ),
+                  );
+                } else {
+                  return Text('data');
+                }
+              }),
             ),
           ],
         ),
